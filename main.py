@@ -1,4 +1,3 @@
-## 개인깃허브에 추가하기!!
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -6,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import os, time, random
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
 import urllib.request
 
@@ -21,7 +21,7 @@ def chromeWebdriver():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     return driver
 
-def collect_image(search_word):
+def collect_image(search_word, extract_img_count):
     url = "https://www.google.co.kr"
     file_path = "/Users/david/Desktop/imagecrawling"
     os.makedirs(file_path + "/" + search_word)
@@ -36,6 +36,41 @@ def collect_image(search_word):
 
     driver.find_element(By.LINK_TEXT, '이미지').click() # 텍스트 메뉴 '이미지' 링크 클릭
     time.sleep(random.uniform(1,2))
+
+    ## 페이지 스크롤 다운
+    def page_scrolling(drivers):
+        ## scrolling ----------
+        elem = driver.find_element(By.TAG_NAME, 'body')
+        page_height = driver.execute_script('return document.body.scrollHeight')
+        # print(page_height)
+
+        # more_view_cnt = 0
+        scroll_cnt = 1
+        more_view_scroll_cnt = -1 # '결과 더보기' 버튼 나올 때의 scroll_cnt (break 처리 위해 사용)
+        equal_cnt = 1
+        while True:
+            elem.send_keys(Keys.PAGE_DOWN)
+            time.sleep(random.uniform(0.3, 0.5))
+            new_height = driver.execute_script('return document.body.scrollHeight')
+            if page_height != new_height:
+                page_height = new_height
+                equal_cnt = 1
+            print(f'scroll_cnt: {scroll_cnt}, new_height: {new_height}, equal_cnt: {equal_cnt}')
+
+            try:
+                scroll_cnt += 1
+                equal_cnt += 1
+                driver.find_element(By.XPATH, '//*[@id="islmp"]/div/div/div/div[1]/div[2]/div[2]/input').click() # 결과 더보기 버튼 처리
+                print('결과 더보기 버튼 클릭 처리')
+                more_view_scroll_cnt = scroll_cnt
+                more_view_scroll_cnt += 1
+            except:
+                if equal_cnt == 20: # scroll_cnt / more_view_scroll_cnt > 2.5:
+                    break
+                continue
+            ## End of scrolling -------------
+
+    page_scrolling(driver)
 
     file_no = 1
     count = 1
@@ -75,8 +110,11 @@ def collect_image(search_word):
         # 파일디렉토리에 저장하기
         imagePath = file_path + "/" + search_word
         print(f'{file_no}번째 이미지 저장')
+
+        if file_no -1 == extract_img_count:
+            break
     driver.close()
 
 
 if __name__ == '__main__':
-    collect_image("트와이스")
+    collect_image("박진영", 200)
